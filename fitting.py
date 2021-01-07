@@ -17,6 +17,8 @@ def function(x):
 y = function(x)
 
 plt.plot(x,y)
+plt.savefig("test_fig.png",dpi=(250), bbox_inches='tight')
+plt.close()
 
 aaa = np.linspace(start = -10,stop =  10, num = 25)
 yyy= np.arange(start = -1, stop =  1, step = 0.1)
