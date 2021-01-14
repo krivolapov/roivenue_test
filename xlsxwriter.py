@@ -9,7 +9,7 @@ import xlsxwriter
 
 
 # Create an new Excel file and add a worksheet.
-workbook = xlsxwriter.Workbook('images.xlsx')
+workbook = xlsxwriter.Workbook('new.xlsx')
 worksheet = workbook.add_worksheet()
 
 # Widen the first column to make the text clearer.
