@@ -5,3 +5,8 @@
 *.xlsx
 *.pdf
 .~*.*
+*.jpg
+*.json
+__pycache__/
+*.png
+*.svg
