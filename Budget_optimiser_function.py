@@ -1,20 +1,23 @@
 import pandas as pd
-import math
-import matplotlib.pyplot as plt
+#import math
+#import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import kurtosis, iqr, shapiro
+#from scipy.stats import kurtosis, iqr, shapiro
 from scipy.optimize import differential_evolution
 import warnings
+import scipy.stats as stat
+
 
 DateTimeID = ['periodStartDate']
 
-usecols = [
-    "adCampaign", "platformCode","currencyCode", "channelCode", "marketingInvestment",
+usecols_ = [
+    "account","adCampaign", "platformCode","currencyCode", "channelCode", "marketingInvestment",
     "impressions", "clicks", "visits", "conversions", "deliveries",
     "netRevenue", "grossProfit", "adGroup", "periodStartDate","businessUnit"
           ]
 
-dtype = {
+dtype_ = {
+    'account': str,
     'adCampaign' : str,
     'platformCode' : str,
     'businessUnit':str,
@@ -37,22 +40,27 @@ r2_stat_name = ['R2-mean','R2-std','R2-norm','R2-chi-sqr'] # func [line, log] if
 
 
 # regression functions definition
-def log_f(x, a, b, c):
-    return a * (1-np.exp(-x/b)) + c #a * (1 - np.exp((x/b)))
+def log_f(x, a, b):
+    return a * (1-np.exp(-x/b)) #a * (1 - np.exp((x/b)))
+
 
 def line_f(x, a, b):
     return a * x + b
 
+
 def sine_f(x, a, b):
     return a * np.sin(b * x)
+
 
 t_train = []
 y_train = []
 
+
 def main_statistics(df, precision = 3):
     """ Function input pandas series or numpy array
         input: dataframe, precision -> digits after point
-        output: mean, std, median, skewness, kurtosis, variance, interquartile range, Shapiro-Wilk Test [Stat, Pr] """
+        output: mean, std, median, skewness, kurtosis, variance, 
+        interquartile range, Shapiro-Wilk Test [Stat, Pr] """
     from scipy.stats import kurtosis, iqr, shapiro
     result = []
     count,mean, std, *all = df.describe()
@@ -72,6 +80,7 @@ def main_statistics(df, precision = 3):
     result.append(np.round(p,precision))
     return result
 
+
 def regression_calc(df, function):
     """Calculate paramiters of regression function
     input: pandas dataframe [x,y]
@@ -85,6 +94,7 @@ def regression_calc(df, function):
     error  = np.sqrt(np.diag(pcov))
     return popt, error
 
+
 # function for genetic algorithm to minimize (sum of squared error)
 def sumOfSquaredError(parameterTuple):
     function = log_f # it's bad staff #TODO
@@ -96,11 +106,12 @@ def sumOfSquaredError(parameterTuple):
 # function for search initial value for regression parameters
 
 def generate_Initial_Parameters(t_train, y_train,function):
+    """ Calculate intitial paramiters for curve_fit function"""
     # min and max used for bounds
     maxX = max(t_train)
-    minX = min(t_train)
+    #minX = min(t_train)
     maxY = max(y_train)
-    minY = min(y_train)
+    #minY = min(y_train)
     maxXY = max(maxX, maxY)
 
     parameterBounds = []
@@ -155,11 +166,8 @@ def stat_index_platform(df, platform_code, granularity, index, precision):
     statistics_ROI = []
     for i in platform_code:
         new_df = df[df['platformCode'] == i]
-
         selected_df = select_agg_resample_df(new_df, 'periodStartDate', granularity, use_nan = False)      
-
         stat = main_statistics(selected_df[index], precision)
-
         statistics_ROI.append(stat)
         
     statistics_df = pd.DataFrame(statistics_ROI, columns = stat_name)
@@ -169,5 +177,85 @@ def stat_index_platform(df, platform_code, granularity, index, precision):
 
 def filter_df(df, alpha):
     return df.ewm(alpha=alpha, adjust=False).mean()
+
+
+def corr_stat_calc(df):
+    time_window_regr = 12
+    business_unit_code = df['businessUnit'].unique().tolist()
+    business_unit_code.sort()
+
+    currency_code = df['currencyCode'].unique().tolist()
+    currency_code.sort()
+    output = pd.DataFrame()
+    
+    df_time_selected = df[df['periodStartDate'] >= df['periodStartDate'].max() - pd.DateOffset(weeks=time_window_regr)] 
+
+    for i in business_unit_code:
+        df_selected = df_time_selected[df_time_selected['businessUnit'] == i]
+        
+        platform_code = df['platformCode'].unique().tolist()
+        platform_code.sort()
+
+        for z in platform_code:
+            df_platform = df_selected[df_selected['platformCode'] == z]
+            #ad_campaign_code = df_platform['adCampaign'].unique().tolist()
+            
+            channel_code = df['channelCode'].unique().tolist()
+            channel_code.sort()
+        
+            for y in channel_code:
+            
+                df_platform = df_selected[df_selected['channelCode'] == y]
+
+                df_business_selected_agg = select_agg_resample_df(df_platform, 'periodStartDate', 'week', use_nan = False)
+                temp_dict = dict([('Business unit',''),
+                            ('Platform',''),
+                            ('Channel',''),
+                            ('Corr coeff.', 0),
+                            ('Pr. value', 0),
+                            ('a', np.nan),
+                            ('b',0),
+                            ('Mean',0),
+                            ('R-std',0),
+                            ('Invest',0),
+                            ('Profit',0)])
+
+                #temp_dict['Client'] = account_code[0]
+                temp_dict['Business unit'] = i
+                temp_dict['Platform'] = z
+                temp_dict['Channel'] = y
+        
+                temp_dict['Profit'] = np.round(df_business_selected_agg['grossProfit'].sum(), 2)
+                temp_dict['Invest'] = np.round(df_business_selected_agg['marketingInvestment'].sum(), 2)
+            
+                df_business_selected_agg = filter_df(df_business_selected_agg, 0.2)
+        
+                sper_crr, P_value = stat.spearmanr(df_business_selected_agg['marketingInvestment'], df_business_selected_agg['grossProfit'])
+                if sper_crr> 0.9:
+
+                    try:
+                        sorted_df = df_business_selected_agg.sort_values( by=['marketingInvestment'], ascending=False )
+                        t_train = sorted_df['marketingInvestment']
+                        y_train = sorted_df['grossProfit']
+
+                        regr, err = regression_calc(sorted_df[['marketingInvestment','grossProfit']],log_f)
+                        R = sorted_df['grossProfit'] - log_f(sorted_df['marketingInvestment'], *regr)
+                        R_std = R.describe()['std']
+                        Y_mean = sorted_df['grossProfit'].describe()[1]
+                        a,b = regr
+                        
+                        temp_dict['R-std'] = R_std
+                        temp_dict['Mean'] = Y_mean
+                        temp_dict['a'] = a
+                        temp_dict['b'] = b
+
+                    except:
+                        pass
+                else:
+                    pass
+                output = output.append(temp_dict, ignore_index=True)
+    return output
+
+
 
 
