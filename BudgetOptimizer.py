@@ -19,6 +19,9 @@ settings_estimator = {'alpha'   :   0.1,
                       'dependant_var':'grossProfit',
                       'independatnt_var': 'marketingInvestment',
                       'filter_type': 'EWM',
+                      'optimization_type':'Keep_budget',
+                      'optimization_settings':'Conservative',
+                      'budget_change': 0,
                       'client': ''
                       }
 
@@ -254,8 +257,8 @@ class EstimatorClass:
                 t_train = sorted_df['marketingInvestment']
                 y_train = sorted_df['grossProfit']
         
-                temp_dict['X'] = t_train.to_list()
-                temp_dict['Y'] = y_train.to_list()
+                temp_dict['X'] = df_business_selected_agg['marketingInvestment'].to_list()
+                temp_dict['Y'] = df_business_selected_agg['grossProfit'].to_list()
 
         
                 if sper_crr > 0.9:
@@ -264,7 +267,7 @@ class EstimatorClass:
 
                         regr, err = regression_calc(sorted_df[['marketingInvestment', 'grossProfit']], log_f)
 
-                        R = sorted_df['grossProfit'] -  log_f(sorted_df['marketingInvestment'], *regr)
+                        R = df_business_selected_agg['grossProfit'] -  log_f(df_business_selected_agg['marketingInvestment'], *regr)
                         R_std = R.describe()['std']
 
                         a, b = regr
@@ -276,8 +279,9 @@ class EstimatorClass:
                         x_space = np.linspace(0, (max(temp_dict['X']) * 1.5), num = len(temp_dict['X']))
                         temp_dict['Regr_X'] = x_space.tolist() 
                         temp_dict['Regt_Y'] = log_f(x_space, a, b)
+                        temp_dict['Up_line_Y'] = log_f(x_space, a,b) + 2* R_std
+                        temp_dict['Down_line_Y'] = log_f(x_space, a,b) - 2* R_std
                             
-           
                     except:
                         print("Regression wasn't calculated")
                         temp_dict['a'] = 0
@@ -307,6 +311,110 @@ class OptimizerClass:
         self.data = data
         print("Load optimizer data")
 
+    def optimization(self):
+        #filterd_out = output[~output['Platform'].isin(dropped_ch)]
+
+        def log_f(x, a, b):
+            return a * (1-np.exp(-x/b)) #a * (1 - np.exp((x/b)))
+
+        #filterd_out = self.data
+        corr_df = self.data[self.data['Corr_coeff'] > self.settings['corr_thd']]
+        non_corr_df = self.data[self.data['Corr_coeff'] <= self.settings['corr_thd']]
+
+        corr_df.reset_index(inplace=True, drop=True)
+        non_corr_df.reset_index(inplace=True, drop=True)
+
+        control_inv = corr_df['Invest'].sum()
+        non_control_inv = non_corr_df['Invest'].sum()
+        control_prof = corr_df['Profit'].sum()
+        non_control_prof = non_corr_df['Profit'].sum()
+
+        # budget optimizer preprocessing 
+        corr_df['+10%invest'] = corr_df['Invest_prev_week'] * 1.1
+        corr_df['+20%invest'] = corr_df['Invest_prev_week'] * 1.2
+        corr_df['-10%invest'] = corr_df['Invest_prev_week'] * 0.9
+        corr_df['-20%invest'] = corr_df['Invest_prev_week'] * 0.8
+
+        corr_df['slope_plus_10'] = 0.0
+        corr_df['slope_plus_20'] = 0.0
+        corr_df['slope_minus_10'] = 0.0
+        corr_df['slope_minus_20'] = 0.0
+
+        corr_df['opt_invest'] = 0.0
+        corr_df['profit_change'] = 0.0
+
+        
+
+        for i in range(len(corr_df)):
+            profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i]))
+    
+            profit_plus_10 = float(log_f(corr_df['+10%invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_plus_10 = float((profit_plus_10 - profit_base))/float((corr_df['+10%invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_plus_10'][i] = slope_plus_10
+    
+            profit_plus_20 = float(log_f(corr_df['+20%invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_plus_20 = float((profit_plus_20 - profit_base))/float((corr_df['+20%invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_plus_20'][i] = slope_plus_20
+    
+            profit_minus_10 = float(log_f(corr_df['-10%invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_minus_10 = float((profit_minus_10 - profit_base))/float((corr_df['-10%invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_minus_10'][i] = -slope_minus_10
+    
+            profit_minus_20 = float(log_f(corr_df['-20%invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_minus_20 = float((profit_minus_20 - profit_base))/float((corr_df['-20%invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_minus_20'][i] = -slope_minus_20
+
+    
+        invest_pool_plus_10 = (corr_df['Invest_prev_week'] - corr_df['-10%invest']).sum()
+        invest_pool_plus_20 = (corr_df['Invest_prev_week'] - corr_df['-20%invest']).sum()
+
+
+        zzz = corr_df.sort_values(by=['slope_plus_10'], ascending=False)
+        zzz.reset_index(inplace=True, drop=True)
+
+
+        if self.settings['optimization_type'] == 'Keep_budget':
+            if self.settings['optimization_settings'] == 'Conservative':
+                accum = invest_pool_plus_10
+            elif self.settings['optimization_settings'] == 'Aggressive':
+                accum = invest_pool_plus_20
+        elif self.settings['optimization_type'] == 'Change_budget':
+            if self.settings['optimization_settings'] == 'Conservative':
+                accum = invest_pool_plus_10 + self.settings['budget_change'] 
+            elif self.settings['optimization_settings'] == 'Aggressive':
+                accum = invest_pool_plus_20 + self.settings['budget_change']
+        
+        
+        for i in range (len(zzz)):
+            temp = (zzz['+10%invest'][i] - zzz['-10%invest'][i] )
+            if temp <= accum:
+                zzz['opt_invest'][i] = zzz['+10%invest'][i]
+                accum = accum - temp
+            else:
+                zzz['opt_invest'][i] = zzz['-10%invest'][i] + accum
+                accum = 0.0   
+
+             
+        for i in range (len(zzz)):
+            profit_base = float(log_f(zzz['Invest_prev_week'][i], zzz['a'][i], zzz['b'][i]))
+            optim_profit = float(log_f(zzz['opt_invest'][i], zzz['a'][i], zzz['b'][i]))
+            zzz['profit_change'][i] = optim_profit - profit_base
+
+        prof_chng = zzz['profit_change'].sum()
+        prof_last_week = zzz['Prof_prev_week'].sum()
+        all_prof_last_week = self.data['Prof_prev_week'].sum()
+
+
+        result = pd.concat([non_corr_df, zzz], ignore_index=True)
+
+        stats = {'Invest last week':0,
+                'Controlled Profit last week': prof_last_week,
+                'Total profit last week': all_prof_last_week,
+                'Expected profit change' : prof_chng
+                }
+
+        return result, stats
+
 
 class TrainerClass:
     def __init__(self):
@@ -324,3 +432,18 @@ class TrainerClass:
 
     def call_private(self):
         self.__start()
+
+
+
+def Optimizer(df, settings):
+    estimator = EstimatorClass()
+    estimator.load_settings(settings)
+    estimator.load_data(df)
+    regr_df = estimator.corr_data()
+
+    optimizer = OptimizerClass()
+    optimizer.load_settings(settings_estimator)
+    optimizer.load_data(regr_df)
+    opt_result, stats = optimizer.optimization()
+
+    return opt_result, stats
