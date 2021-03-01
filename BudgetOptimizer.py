@@ -407,12 +407,19 @@ class OptimizerClass:
 
         result = pd.concat([non_corr_df, zzz], ignore_index=True)
 
-        stats = {'Invest_last_week':0,
-                'Controlled_Profit_last_week': prof_last_week,
-                'Total_profit_last_week': all_prof_last_week,
-                'Expected_profit_change' : prof_chng,
-                'Confidence_interval': self.settings['margin']
+        stats = {
+                  'Invest_last_week':0,
+                  'Controlled_Profit_last_week' : prof_last_week,
+                  'Total_profit_last_week' : all_prof_last_week,
+                  'Expected_profit_change' : prof_chng,
+                  'Controlled_investment' : control_inv,
+                  'Non-controlled_investment' : non_control_inv,
+                  'Controlled_profit' : control_prof,
+                  'Non_controlled_profit' : non_control_prof,
+                  'Confidence_interval': self.settings['margin']
                 }
+
+
 
         return result, stats
 
@@ -458,7 +465,7 @@ def Optimizer(  performance_dataset,
     performance_dataset           pandas dataframe  initial dataframe  
     alpha                         float             EWM (exponential weathered mean) filter parameter
     correlation_treshold          float             Non-linear Spermann correlation coefficient, optional
-    time_window_regession         int               time window for regression calculation, optional
+    time_window_regession         int               time window for regression calculation (in case of 'week' period in should be number multiply of 7), optional
     period                        str               ['day','week','month'], mandatory
     confidence_interval           float             Number of standard deviations, optional (1:63%, 2:95%, 3:99%)
     level                         str               ['platform','channel','campaign'], optional
@@ -510,10 +517,15 @@ def Optimizer(  performance_dataset,
           key name                 | data-type | description
     -------------------------------------------------------------------------------
     {
-    'Invest_last_week':              float
-    'Controlled_Profit_last_week':   float         Marketing investment we able to control (all components with with proper regression model )
-    'Total_profit_last_week':        float      
-    'Expected_profit_change':        float         Expected profit change based on optimization settings and controlled components of dataset 
+    'Invest_last_week':               float
+    'Controlled_Profit_last_week':    float         Marketing investment we able to control (all components with with proper regression model )
+    'Total_profit_last_week':         float      
+    'Expected_profit_change':         float         Expected profit change based on optimization settings and controlled components of dataset 
+    'Controlled_investment' :         float
+    'Non-controlled_investment':      float
+    'Controlled_frofit':              float
+    'Non_controlled':                 float
+    'Confidence_interval':            float
     }
 
     """
@@ -532,8 +544,6 @@ def Optimizer(  performance_dataset,
     settings['filter_type'] = filter_type
     settings['change_investment'] = change_investment
     settings['maximum_investment_change'] = maximum_investment_change
-    settings['alpha'] = alpha
-
 
 
     estimator = EstimatorClass()
