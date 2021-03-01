@@ -1,14 +1,9 @@
 import pandas as pd
-#import math
-#import matplotlib.pyplot as plt
 import numpy as np
 #from scipy.stats import kurtosis, iqr, Shapiro
 from scipy.optimize import differential_evolution
 import warnings
-#import matplotlib.pyplot as plt
 import scipy.stats as stat
-
-#from Budget_optimiser_function import filter_df
 
 settings_estimator = {'alpha'   :   0.1,
                       'corr_thd':   0.9,
@@ -208,12 +203,12 @@ class EstimatorClass:
                 elif self.settings['level'] == 'compaign':
                     df_platform = df_selected[df_selected['adCampaign'] == z]
         
-        
                 elif self.settings['level'] == 'channel':
                     df_platform = df_selected[df_selected['channelCode'] == z]
         
 
                 df_business_selected_agg = select_agg_resample_df( df_platform, 'periodStartDate', 'week', use_nan=False )
+
                
                 temp_dict['Max_week_profit'] = df_business_selected_agg.grossProfit[:].max()
                 temp_dict['Max_week_invest'] = df_business_selected_agg.marketingInvestment[:].max()
