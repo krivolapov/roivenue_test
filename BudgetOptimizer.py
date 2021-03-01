@@ -14,7 +14,7 @@ settings_estimator = {'alpha'   :   0.1,
                       'corr_thd':   0.9,
                       'time_window_regr':12,
                       'period'  :   'week',
-                      'margin'  :   1.0,
+                      'margin'  :   2.0,
                       'level'   :   'platform',
                       'dependant_var':'grossProfit',
                       'independatnt_var': 'marketingInvestment',
@@ -410,7 +410,8 @@ class OptimizerClass:
         stats = {'Invest_last_week':0,
                 'Controlled_Profit_last_week': prof_last_week,
                 'Total_profit_last_week': all_prof_last_week,
-                'Expected_profit_change' : prof_chng
+                'Expected_profit_change' : prof_chng,
+                'Confidence_interval': self.settings['margin']
                 }
 
         return result, stats
@@ -545,4 +546,4 @@ def Optimizer(  performance_dataset,
     optimizer.load_data(regr_df)
     opt_result, stats = optimizer.optimization()
 
-    return opt_result, stat
+    return opt_result, stats
