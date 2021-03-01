@@ -407,10 +407,10 @@ class OptimizerClass:
 
         result = pd.concat([non_corr_df, zzz], ignore_index=True)
 
-        stats = {'Invest last week':0,
-                'Controlled Profit last week': prof_last_week,
-                'Total profit last week': all_prof_last_week,
-                'Expected profit change' : prof_chng
+        stats = {'Invest_last_week':0,
+                'Controlled_Profit_last_week': prof_last_week,
+                'Total_profit_last_week': all_prof_last_week,
+                'Expected_profit_change' : prof_chng
                 }
 
         return result, stats
@@ -435,10 +435,109 @@ class TrainerClass:
 
 
 
-def Optimizer(df, settings):
+def Optimizer(  performance_dataset,
+                alpha=0.1,
+                correlation_treshold=0.9, 
+                time_window_regession=84, 
+                period='week',  
+                confidence_interval=2.0, 
+                level='platform',
+                dependant_variable='grossProfit',   
+                independant_variable = 'marketingInvestment', 
+                filter_type = 'EWM',   
+                change_investment = 0,   
+                maximum_investment_change = 0.1):   
+    """
+    Documentation for optimizer function
+    #-----------------------------------------------------------------------------------------
+    Input parameters description
+    #-----------------------------------------------------------------------------------------
+            name                 |  data-type      | description
+    ------------------------------------------------------------------------------------------
+    performance_dataset           pandas dataframe  initial dataframe  
+    alpha                         float             EWM (exponential weathered mean) filter parameter
+    correlation_treshold          float             Non-linear Spermann correlation coefficient, optional
+    time_window_regession         int               time window for regression calculation, optional
+    period                        str               ['day','week','month'], mandatory
+    confidence_interval           float             Number of standard deviations, optional (1:63%, 2:95%, 3:99%)
+    level                         str               ['platform','channel','campaign'], optional
+    dependant_variable            str               ['grossProfit','impressions','clicks','visits','conversions','deliveries'], optional
+    independant_variable          str               Optional, there is only one possible variable, optional
+    filter_type                   str               Exponential Weighted Mean by default ['None','Median','EWM'], optional
+    change_investment             int               0 means no investment change, only reallocation, any number means add or remove investment e.g. -200000, 35000, optional
+    maximum_investment_change     float             Maximum change of investment allocation on one component against the last value. The value can be 0.1-0.2, optional
+
+    #-----------------------------------------------------------------------------------------
+    Output: ([pandas dataframe], [dictionary]) 
+    #------------------------------------------------------------------------------------------
+
+    Dataframe (component's related output):
+
+    ------------------------------------------------------------------------------------------
+            column name           |  data-type   |   discrimination
+    ------------------------------------------------------------------------------------------
+    client                           float          Client ID
+    business_unit                    float          Business_id
+    platform                         float          Name of the platform
+    independend_value_total          float          Total investment in the selected period
+    independend_value_max            float
+    independend_value_last_week      float
+    independend_value_last_week      float
+    independend_value_list           float
+    dependent_value_total            float          Total profit in the selected period
+    dependent_value_max              float          Dependant value list according function's settings ('dependant_variable')
+    dependend_value_last_week        float          Dependant value list according function's settings ('dependant_variable')
+    dependend_value_previous_week    float
+    dependend_value_list             [float]    
+    central_line_list_x              [float]        List of x values for regression visualization
+    central_line_list_y              [float]        List of y values for regression 
+    upper_line_list_y                [float]        List of y values for upper confidence interval (Regression value + residual standard deviation * confidence_interval)
+    lower_line_list_y                [float]        List of y values for lower confidence interval (Regression value - residual standard deviation * confidence_interval)
+
+    # diagnostic part of output dataframe (not for visualization)
+
+    _corr_coeff                      [float]       Spearman's rank correlation coefficient for all components 
+    _pr_value:                       [float]       Probability of Spearman's test
+    _a:                              [float]       Regression coefficient
+    _b:                              [float]       Regression coefficient
+    _mean:                           [float]       Mean value of period
+    _r_std:                          [float]       Residual vector standard deviation
+
+    #------------------------------------------------------------------------------
+    Dictionary (overall statistics for dataframe):
+    #------------------------------------------------------------------------------
+          key name                 | data-type | description
+    -------------------------------------------------------------------------------
+    {
+    'Invest_last_week':              float
+    'Controlled_Profit_last_week':   float         Marketing investment we able to control (all components with with proper regression model )
+    'Total_profit_last_week':        float      
+    'Expected_profit_change':        float         Expected profit change based on optimization settings and controlled components of dataset 
+    }
+
+    """
+
+
+    settings = {**settings_estimator}
+
+    settings['alpha'] = alpha
+    settings['corr_thd'] = correlation_treshold
+    settings['time_window_regr'] = time_window_regession
+    settings['period'] = period
+    settings['margin'] = confidence_interval
+    settings['level'] = level
+    settings['dependant_var'] = dependant_variable
+    settings['independatnt_var'] = independant_variable
+    settings['filter_type'] = filter_type
+    settings['change_investment'] = change_investment
+    settings['maximum_investment_change'] = maximum_investment_change
+    settings['alpha'] = alpha
+
+
+
     estimator = EstimatorClass()
     estimator.load_settings(settings)
-    estimator.load_data(df)
+    estimator.load_data(performance_dataset)
     regr_df = estimator.corr_data()
 
     optimizer = OptimizerClass()
@@ -446,4 +545,4 @@ def Optimizer(df, settings):
     optimizer.load_data(regr_df)
     opt_result, stats = optimizer.optimization()
 
-    return opt_result, stats
+    return opt_result, stat
