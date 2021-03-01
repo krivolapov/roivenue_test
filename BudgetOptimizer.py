@@ -279,8 +279,8 @@ class EstimatorClass:
                         x_space = np.linspace(0, (max(temp_dict['X']) * 1.5), num = len(temp_dict['X']))
                         temp_dict['Regr_X'] = x_space.tolist() 
                         temp_dict['Regt_Y'] = log_f(x_space, a, b)
-                        temp_dict['Up_line_Y'] = log_f(x_space, a,b) + 2* R_std
-                        temp_dict['Down_line_Y'] = log_f(x_space, a,b) - 2* R_std
+                        temp_dict['Up_line_Y'] = log_f(x_space, a,b) + self.settings['margin'] * R_std
+                        temp_dict['Down_line_Y'] = log_f(x_space, a,b) - self.settings['margin'] * R_std
                             
                     except:
                         print("Regression wasn't calculated")
