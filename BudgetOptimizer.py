@@ -111,8 +111,9 @@ class EstimatorClass:
             return group_agg_df
 
 
-        def log_f(x, a, b):
-            return a * (1-np.exp(-x/b)) #a * (1 - np.exp((x/b)))
+        def log_f(x, a, b, c):
+            #return a * np.sin(x/b)
+            return a * (1-np.exp(-x/b)) + c #a * (1 - np.exp((x/b)))
 
 
         # function for genetic algorithm to minimize (sum of squared error)
@@ -135,7 +136,7 @@ class EstimatorClass:
             parameterBounds = []
             parameterBounds.append([-maxXY, maxXY]) # search bounds for a
             parameterBounds.append([-maxXY, maxXY]) # search bounds for b
-            #parameterBounds.append([-maxXY, maxXY]) # search bounds for c
+            parameterBounds.append([-maxXY, maxXY]) # search bounds for c
 
             # "seed" the numpy random number generator for repeatable results
             result = differential_evolution(sumOfSquaredError, parameterBounds, seed=3)
@@ -265,25 +266,28 @@ class EstimatorClass:
                         R = df_business_selected_agg['grossProfit'] -  log_f(df_business_selected_agg['marketingInvestment'], *regr)
                         R_std = R.describe()['std']
 
-                        a, b = regr
+                        a, b, c = regr
                         temp_dict['a'] = a
                         temp_dict['b'] = b
+                        temp_dict['c'] = c
                         temp_dict['R_std'] = R_std
 
-                        # add 25% to maximum value for visualization of the prediction (+-10 or 20%)
-                        x_space = np.linspace(0, (max(temp_dict['X']) * 1.25), num = len(temp_dict['X']))
+                        # add 25% to maximum value for visualization of the prediction (+-10%)
+                        x_space = np.linspace(0, (max(temp_dict['X']) * 1.1), num = len(temp_dict['X']))
                         temp_dict['Regr_X'] = x_space.tolist() 
-                        temp_dict['Regt_Y'] = log_f(x_space, a, b)
-                        temp_dict['Up_line_Y'] = log_f(x_space, a,b) + self.settings['margin'] * R_std
-                        temp_dict['Down_line_Y'] = log_f(x_space, a,b) - self.settings['margin'] * R_std
+                        temp_dict['Regt_Y'] = log_f(x_space, a, b, c)
+                        temp_dict['Up_line_Y'] = log_f(x_space, a, b, c) + self.settings['margin'] * R_std
+                        temp_dict['Down_line_Y'] = log_f(x_space, a, b, c) - self.settings['margin'] * R_std
                             
                     except:
                         print("Regression wasn't calculated")
                         temp_dict['a'] = 0
                         temp_dict['b'] = 0
+                        temp_dict['c'] = 0
                 else:
                     temp_dict['a'] = 0
                     temp_dict['b'] = 0
+                    temp_dict['c'] = 0
 
                 output = output.append(temp_dict, ignore_index=True)
         
@@ -309,8 +313,9 @@ class OptimizerClass:
     def optimization(self):
         #filterd_out = output[~output['Platform'].isin(dropped_ch)]
 
-        def log_f(x, a, b):
-            return a * (1-np.exp(-x/b)) #a * (1 - np.exp((x/b)))
+        def log_f(x, a, b, c):
+            #return a * np.sin(x/b)
+            return a * (1-np.exp(-x/b)) + c #a * (1 - np.exp((x/b)))
 
         #filterd_out = self.data
         corr_df = self.data[self.data['Corr_coeff'] > self.settings['corr_thd']]
@@ -338,16 +343,16 @@ class OptimizerClass:
 
         
         for i in range(len(corr_df)):
-            profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i]))
+            profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i], corr_df['c'][i]))
             
-            profit_plus = float(log_f(corr_df['plus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            profit_plus = float(log_f(corr_df['plus_invest'][i], corr_df['a'][i], corr_df['b'][i], corr_df['c'][i]))
             try:
                 slope_plus = float((profit_plus - profit_base))/float((corr_df['plus_invest'][i] - corr_df['Invest_prev_week'][i]))
                 corr_df['slope_plus'][i] = slope_plus
             except ZeroDivisionError:
                 corr_df['slope_plus'][i] = 0
     
-            profit_minus = float(log_f(corr_df['minus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            profit_minus = float(log_f(corr_df['minus_invest'][i], corr_df['a'][i], corr_df['b'][i], corr_df['c'][i]))
             try:
                 slope_minus = float((profit_minus - profit_base))/float((corr_df['minus_invest'][i] - corr_df['Invest_prev_week'][i]))
                 corr_df['slope_minus'][i] = -slope_minus
@@ -378,8 +383,8 @@ class OptimizerClass:
 
              
         for i in range (len(zzz)):
-            profit_base = float(log_f(zzz['Invest_prev_week'][i], zzz['a'][i], zzz['b'][i]))
-            optim_profit = float(log_f(zzz['opt_invest'][i], zzz['a'][i], zzz['b'][i]))
+            profit_base = float(log_f(zzz['Invest_prev_week'][i], zzz['a'][i], zzz['b'][i], zzz['c'][i]))
+            optim_profit = float(log_f(zzz['opt_invest'][i], zzz['a'][i], zzz['b'][i], zzz['c'][i]))
             zzz['profit_change'][i] = optim_profit - profit_base
 
         prof_chng = zzz['profit_change'].sum()
@@ -426,17 +431,17 @@ class TrainerClass:
 
 
 def Optimizer(  performance_dataset,
-                alpha=0.1,
-                correlation_treshold=0.9, 
+                alpha=0.1,                          # tested OK
+                correlation_treshold=0.9,           # tested OK
                 time_window_regession=84, 
                 period='week',  
-                confidence_interval=2.0, 
-                level='platform',
+                confidence_interval=2.0,            # tested OK
+                level='platform',                   # tested +-
                 dependant_variable='grossProfit',   
                 independant_variable = 'marketingInvestment', 
                 filter_type = 'EWM',   
-                change_investment = 0,   
-                maximum_investment_change = 0.1):   
+                change_investment = 0,              # tested OK
+                maximum_investment_change = 0.1):   # tested OK
     """
     Documentation for optimizer function
     #-----------------------------------------------------------------------------------------
