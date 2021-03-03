@@ -339,15 +339,21 @@ class OptimizerClass:
         
         for i in range(len(corr_df)):
             profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i]))
-    
+            
             profit_plus = float(log_f(corr_df['plus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_plus = float((profit_plus - profit_base))/float((corr_df['plus_invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_plus'][i] = slope_plus
-    
+            try:
+                slope_plus = float((profit_plus - profit_base))/float((corr_df['plus_invest'][i] - corr_df['Invest_prev_week'][i]))
+                corr_df['slope_plus'][i] = slope_plus
+            except ZeroDivisionError:
+                corr_df['slope_plus'][i] = 0
     
             profit_minus = float(log_f(corr_df['minus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_minus = float((profit_minus - profit_base))/float((corr_df['minus_invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_minus'][i] = -slope_minus
+            try:
+                slope_minus = float((profit_minus - profit_base))/float((corr_df['minus_invest'][i] - corr_df['Invest_prev_week'][i]))
+                corr_df['slope_minus'][i] = -slope_minus
+            except ZeroDivisionError:
+                corr_df['slope_minus'][i] = 0
+
     
  
         invest_pool = (corr_df['Invest_prev_week'] - corr_df['minus_invest']).sum()
