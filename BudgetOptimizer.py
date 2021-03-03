@@ -325,15 +325,13 @@ class OptimizerClass:
         non_control_prof = non_corr_df['Profit'].sum()
 
         # budget optimizer preprocessing 
-        corr_df['+10%invest'] = corr_df['Invest_prev_week'] * 1.1
-        corr_df['+20%invest'] = corr_df['Invest_prev_week'] * 1.2
-        corr_df['-10%invest'] = corr_df['Invest_prev_week'] * 0.9
-        corr_df['-20%invest'] = corr_df['Invest_prev_week'] * 0.8
+        corr_df['plus_invest'] = corr_df['Invest_prev_week'] * (1 + self.settings['max_invest_chng'])
+        corr_df['minus_invest'] = corr_df['Invest_prev_week'] * (1 - self.settings['max_invest_chng'])
 
-        corr_df['slope_plus_10'] = 0.0
-        corr_df['slope_plus_20'] = 0.0
-        corr_df['slope_minus_10'] = 0.0
-        corr_df['slope_minus_20'] = 0.0
+
+        corr_df['slope_plus'] = 0.0
+        corr_df['slope_minus'] = 0.0
+
 
         corr_df['opt_invest'] = 0.0
         corr_df['profit_change'] = 0.0
@@ -343,50 +341,35 @@ class OptimizerClass:
         for i in range(len(corr_df)):
             profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i]))
     
-            profit_plus_10 = float(log_f(corr_df['+10%invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_plus_10 = float((profit_plus_10 - profit_base))/float((corr_df['+10%invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_plus_10'][i] = slope_plus_10
+            profit_plus = float(log_f(corr_df['plus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_plus = float((profit_plus - profit_base))/float((corr_df['plus_invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_plus'][i] = slope_plus
     
-            profit_plus_20 = float(log_f(corr_df['+20%invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_plus_20 = float((profit_plus_20 - profit_base))/float((corr_df['+20%invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_plus_20'][i] = slope_plus_20
-    
-            profit_minus_10 = float(log_f(corr_df['-10%invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_minus_10 = float((profit_minus_10 - profit_base))/float((corr_df['-10%invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_minus_10'][i] = -slope_minus_10
-    
-            profit_minus_20 = float(log_f(corr_df['-20%invest'][i], corr_df['a'][i], corr_df['b'][i]))
-            slope_minus_20 = float((profit_minus_20 - profit_base))/float((corr_df['-20%invest'][i] - corr_df['Invest_prev_week'][i]))
-            corr_df['slope_minus_20'][i] = -slope_minus_20
 
     
-        invest_pool_plus_10 = (corr_df['Invest_prev_week'] - corr_df['-10%invest']).sum()
-        invest_pool_plus_20 = (corr_df['Invest_prev_week'] - corr_df['-20%invest']).sum()
+            profit_minus = float(log_f(corr_df['minus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
+            slope_minus = float((profit_minus - profit_base))/float((corr_df['minus_invest'][i] - corr_df['Invest_prev_week'][i]))
+            corr_df['slope_minus'][i] = -slope_minus
+    
+ 
+        invest_pool = (corr_df['Invest_prev_week'] - corr_df['minus_invest']).sum()
 
 
-        zzz = corr_df.sort_values(by=['slope_plus_10'], ascending=False)
+        zzz = corr_df.sort_values(by=['slope_plus'], ascending=False)
         zzz.reset_index(inplace=True, drop=True)
 
 
-        if self.settings['optimization_type'] == 'Keep_budget':
-            if self.settings['optimization_settings'] == 'Conservative':
-                accum = invest_pool_plus_10
-            elif self.settings['optimization_settings'] == 'Aggressive':
-                accum = invest_pool_plus_20
-        elif self.settings['optimization_type'] == 'Change_budget':
-            if self.settings['optimization_settings'] == 'Conservative':
-                accum = invest_pool_plus_10 + self.settings['budget_change'] 
-            elif self.settings['optimization_settings'] == 'Aggressive':
-                accum = invest_pool_plus_20 + self.settings['budget_change']
+
+        accum = invest_pool + self.settings['change_investment']
         
         
         for i in range (len(zzz)):
-            temp = (zzz['+10%invest'][i] - zzz['-10%invest'][i] )
+            temp = (zzz['plus_invest'][i] - zzz['minus_invest'][i] )
             if temp <= accum:
-                zzz['opt_invest'][i] = zzz['+10%invest'][i]
+                zzz['opt_invest'][i] = zzz['plus_invest'][i]
                 accum = accum - temp
             else:
-                zzz['opt_invest'][i] = zzz['-10%invest'][i] + accum
+                zzz['opt_invest'][i] = zzz['minus_invest'][i] + accum
                 accum = 0.0   
 
              
