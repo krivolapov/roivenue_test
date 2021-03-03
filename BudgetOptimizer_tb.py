@@ -37,8 +37,10 @@ df = pd.read_csv('input\\'+ list_files[1], sep="\t",
 df['periodStartDate'] = pd.to_datetime(df['periodStartDate'])
 
 result, stats = Optimizer(df, 
-                          confidence_interval=3.0, 
-                          change_investment = -200000, 
+                          alpha = 0.2,
+                          confidence_interval=3.0,
+                          change_investment = 0, 
+                          level='platform',
                           maximum_investment_change = 0.2)
 
 print("\n Statistics of optimization \n")
