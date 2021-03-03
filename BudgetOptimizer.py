@@ -270,8 +270,8 @@ class EstimatorClass:
                         temp_dict['b'] = b
                         temp_dict['R_std'] = R_std
 
-                        # add 25% to maximum value for visualisation of the prediction (+-10 or 20%)
-                        x_space = np.linspace(0, (max(temp_dict['X']) * 1.5), num = len(temp_dict['X']))
+                        # add 25% to maximum value for visualization of the prediction (+-10 or 20%)
+                        x_space = np.linspace(0, (max(temp_dict['X']) * 1.25), num = len(temp_dict['X']))
                         temp_dict['Regr_X'] = x_space.tolist() 
                         temp_dict['Regt_Y'] = log_f(x_space, a, b)
                         temp_dict['Up_line_Y'] = log_f(x_space, a,b) + self.settings['margin'] * R_std
