@@ -124,7 +124,7 @@ class EstimatorClass:
 
 
         def generate_Initial_Parameters(t_train, y_train,function):
-            """ Calculate intitial paramiters for curve_fit function"""
+            """ Calculate initial parameters for curve_fit function"""
             # min and max used for bounds
             maxX = max(t_train)
             #minX = min(t_train)
@@ -143,9 +143,9 @@ class EstimatorClass:
 
 
         def regression_calc(df, function):
-            """Calculate paramiters of regression function
+            """Calculate parameters of regression function
             input: pandas dataframe [x,y]
-            output: list[paramiters], list[std diviation err of paramiters]"""
+            output: list[parameters], list[std divination err of parameters]"""
             from scipy.optimize import curve_fit
             t_train = df[df.columns[0]]  #
             y_train = df[df.columns[1]]
@@ -337,7 +337,6 @@ class OptimizerClass:
         corr_df['profit_change'] = 0.0
 
         
-
         for i in range(len(corr_df)):
             profit_base = float(log_f(corr_df['Invest_prev_week'][i], corr_df['a'][i], corr_df['b'][i]))
     
@@ -345,7 +344,6 @@ class OptimizerClass:
             slope_plus = float((profit_plus - profit_base))/float((corr_df['plus_invest'][i] - corr_df['Invest_prev_week'][i]))
             corr_df['slope_plus'][i] = slope_plus
     
-
     
             profit_minus = float(log_f(corr_df['minus_invest'][i], corr_df['a'][i], corr_df['b'][i]))
             slope_minus = float((profit_minus - profit_base))/float((corr_df['minus_invest'][i] - corr_df['Invest_prev_week'][i]))
@@ -394,10 +392,10 @@ class OptimizerClass:
                   'Non-controlled_investment' : non_control_inv,
                   'Controlled_profit' : control_prof,
                   'Non_controlled_profit' : non_control_prof,
-                  'Confidence_interval': self.settings['margin']
+                  'Confidence_interval': self.settings['margin'],
+                  'Unallocated_extra_budgets': accum,
+                  'Budget_pull':invest_pool
                 }
-
-
 
         return result, stats
 
