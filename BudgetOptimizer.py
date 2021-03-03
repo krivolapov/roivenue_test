@@ -256,7 +256,7 @@ class EstimatorClass:
                 temp_dict['Y'] = df_business_selected_agg['grossProfit'].to_list()
 
         
-                if sper_crr > 0.9:
+                if sper_crr > self.settings['corr_thd']:
                     #print(i + ' business unit ' + z + ' platform has \t' + str(sper_crr) + ' corr coefficient')
                     try:
 
