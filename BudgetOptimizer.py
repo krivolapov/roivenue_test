@@ -296,7 +296,7 @@ class EstimatorClass:
 
 class OptimizerClass:
     def __init__(self):
-        print("Optimizer class Init")
+        print("Optimizer class Initialization")
 
     def load_settings(self, settings):
         self.settings = settings
@@ -521,7 +521,7 @@ def Optimizer(  performance_dataset,
     settings['independatnt_var'] = independant_variable
     settings['filter_type'] = filter_type
     settings['change_investment'] = change_investment
-    settings['maximum_investment_change'] = maximum_investment_change
+    settings['max_invest_chng'] = maximum_investment_change
 
 
     estimator = EstimatorClass()
@@ -530,7 +530,7 @@ def Optimizer(  performance_dataset,
     regr_df = estimator.corr_data()
 
     optimizer = OptimizerClass()
-    optimizer.load_settings(settings_estimator)
+    optimizer.load_settings(settings)
     optimizer.load_data(regr_df)
     opt_result, stats = optimizer.optimization()
 
