@@ -115,9 +115,9 @@ def generate_Initial_Parameters(t_train, y_train,function):
     maxXY = max(maxX, maxY)
 
     parameterBounds = []
-    parameterBounds.append([-maxXY, maxXY]) # seach bounds for a
-    parameterBounds.append([-maxXY, maxXY]) # seach bounds for b
-    parameterBounds.append([-maxXY, maxXY]) # seach bounds for c
+    parameterBounds.append([-maxXY, maxXY]) # search bounds for a
+    parameterBounds.append([-maxXY, maxXY]) # search bounds for b
+    parameterBounds.append([-maxXY, maxXY]) # search bounds for c
 
     # "seed" the numpy random number generator for repeatable results
     result = differential_evolution(sumOfSquaredError, parameterBounds, seed=3)
@@ -126,7 +126,7 @@ def generate_Initial_Parameters(t_train, y_train,function):
 
 
 def select_business_unit(df, business_unit):
-    """Select specific busines unti in dataframe """
+    """Select specific business unit in dataframe """
     return df[df['businessUnit'] == business_unit]
 
 
@@ -160,7 +160,7 @@ def select_agg_resample_df(df, index, granularity, use_nan):
 
 
 def stat_index_platform(df, platform_code, granularity, index, precision):
-    """Calculate marketing indexis for all platforms
+    """Calculate marketing indexes for all platforms
     input: dataframe, granularity, index[ROI, CPI, CPC], precision
     output: dataframe with statistics for all platforms"""
     statistics_ROI = []

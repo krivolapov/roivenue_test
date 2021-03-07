@@ -10,3 +10,6 @@
 __pycache__/
 *.png
 *.svg
+
+.python_packages
+.venv
